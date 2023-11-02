@@ -1,56 +1,47 @@
-import mysql.connector
+import pyodbc
 
-# Function to connect to the MySQL database and fetch all records from the "students" table
-def fetch_student_records(host, user, password, database):
+def connect_to_database():
+    server = 'your_server_name'
+    database = 'your_database_name'
+    username = 'your_username'
+    password = 'your_password'
+
     try:
-        # Connect to the MySQL database
-        connection = mysql.connector.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database
+        # Establish a connection to the SQL Server database
+        connection = pyodbc.connect(
+            f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+            f'SERVER={server};'
+            f'DATABASE={database};'
+            f'UID={username};'
+            f'PWD={password};'
         )
 
-        if connection.is_connected():
-            print("Connected to MySQL database")
+        return connection
+    except Exception as e:
+        print(f"Error connecting to the database: {str(e)}")
+        return None
 
+def fetch_students_data():
+    connection = connect_to_database()
+    if connection is not None:
+        try:
             cursor = connection.cursor()
+            # Query the "students" table to fetch all records
+            cursor.execute("SELECT * FROM students")
 
-            # Query to select all records from the "students" table
-            query = "SELECT * FROM students"
+            # Fetch all records into a list of dictionaries
+            students_data = [dict(zip([column[0] for column in cursor.description], row)) for row in cursor.fetchall()]
 
-            # Execute the query
-            cursor.execute(query)
-
-            # Fetch all records as a list of tuples
-            records = cursor.fetchall()
-
-            # Fetch column names
-            column_names = [description[0] for description in cursor.description]
-
-            return column_names, records
-
-    except mysql.connector.Error as error:
-        print("Error:", error)
-
-    finally:
-        if connection.is_connected():
-            cursor.close()
+            return students_data
+        except Exception as e:
+            print(f"Error querying the database: {str(e)}")
+        finally:
             connection.close()
-            print("MySQL connection is closed")
 
-# Example usage
+    return None
+
 if __name__ == "__main__":
-    # Replace with your MySQL database credentials
-    host = "your_host"
-    user = "your_user"
-    password = "your_password"
-    database = "your_database"
-
-    column_names, student_records = fetch_student_records(host, user, password, database)
-
-    if student_records:
-        print("Column Names:", column_names)
-        print("Student Records:")
-        for record in student_records:
-            print(record)
+    students_data = fetch_students_data()
+    if students_data is not None:
+        for student in students_data:
+            print(student)
